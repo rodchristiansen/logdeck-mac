@@ -24,10 +24,12 @@ PKG_ROOT      = $(BUILD_DIR)/pkg-root
 PACKAGING_DIR = packaging
 SCRIPTS_DIR   = $(BUILD_DIR)/scripts
 
-# Swift build outputs (universal release)
-SWIFT_BUILD_DIR = .build/apple/Products/Release
-GUI_BINARY      = $(SWIFT_BUILD_DIR)/LogDeck
-CLI_BINARY      = $(SWIFT_BUILD_DIR)/logdeck
+# Swift build outputs (per-arch, then lipo'd)
+ARM64_BUILD_DIR  = .build/arm64-apple-macosx/release
+X86_64_BUILD_DIR = .build/x86_64-apple-macosx/release
+UNIVERSAL_DIR    = $(BUILD_DIR)/universal
+GUI_BINARY       = $(UNIVERSAL_DIR)/LogDeck
+CLI_BINARY       = $(UNIVERSAL_DIR)/logdeck
 
 # Package root layout (installed locations)
 APP_INSTALL_PATH  = Applications/Utilities/LogDeck.app
@@ -108,9 +110,21 @@ build: check-signing-config swift-build assemble sign-binaries build-pkg sign-pk
 # ---------------------------------------------------------------------------
 
 swift-build:
-	@echo "$(BLUE)Building universal release binaries (arm64 + x86_64)...$(NC)"
-	@swift build -c release --arch arm64 --arch x86_64
-	@echo "$(GREEN)✓ Swift build complete$(NC)"
+	@echo "$(BLUE)Building release (arm64)...$(NC)"
+	@swift build -c release --arch arm64
+	@echo "$(BLUE)Building release (x86_64)...$(NC)"
+	@swift build -c release --arch x86_64
+	@echo "$(BLUE)Creating universal binaries...$(NC)"
+	@mkdir -p "$(UNIVERSAL_DIR)"
+	@lipo -create \
+		"$(ARM64_BUILD_DIR)/LogDeck" \
+		"$(X86_64_BUILD_DIR)/LogDeck" \
+		-output "$(GUI_BINARY)"
+	@lipo -create \
+		"$(ARM64_BUILD_DIR)/logdeck" \
+		"$(X86_64_BUILD_DIR)/logdeck" \
+		-output "$(CLI_BINARY)"
+	@echo "$(GREEN)✓ Universal binaries ready$(NC)"
 
 assemble: swift-build
 	@echo "$(BLUE)Assembling package root...$(NC)"
