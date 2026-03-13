@@ -8,34 +8,34 @@ let package = Package(
         .macOS(.v15)
     ],
     products: [
-        .library(name: "LogDeckCore", targets: ["LogDeckCore"]),
-        .executable(name: "LogDeck", targets: ["LogDeckApp"]),
-        .executable(name: "logdeck", targets: ["LogDeckCLI"])
+        .library(name: "Core", targets: ["Core"]),
+        .executable(name: "LogDeck", targets: ["GUI"]),
+        .executable(name: "logdeck", targets: ["CLI"])
     ],
     targets: [
         .target(
-            name: "LogDeckCore",
+            name: "Core",
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]
         ),
         .executableTarget(
-            name: "LogDeckApp",
-            dependencies: ["LogDeckCore"],
+            name: "GUI",
+            dependencies: ["Core"],
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]
         ),
         .executableTarget(
-            name: "LogDeckCLI",
-            dependencies: ["LogDeckCore"],
+            name: "CLI",
+            dependencies: ["Core"],
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]
         ),
         .testTarget(
             name: "LogDeckTests",
-            dependencies: ["LogDeckCore"],
+            dependencies: ["Core"],
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]

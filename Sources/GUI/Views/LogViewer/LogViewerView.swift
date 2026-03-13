@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 struct LogViewerView: View {
     let source: LogSource

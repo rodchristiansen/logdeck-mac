@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 struct ToolRowView: View {
     let module: any ToolModule

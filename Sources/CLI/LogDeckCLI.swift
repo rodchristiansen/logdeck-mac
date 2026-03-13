@@ -1,5 +1,5 @@
 import Foundation
-import LogDeckCore
+import Core
 
 @main
 struct LogDeckCLI {

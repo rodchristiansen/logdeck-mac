@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 struct ModulesSettingsView: View {
     @Environment(AppState.self) private var appState

@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 import AppKit
 
 struct ActionButtons: View {

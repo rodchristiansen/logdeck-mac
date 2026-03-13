@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 @main
 struct LogDeckApp: App {

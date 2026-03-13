@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 struct SidebarView: View {
     @Environment(AppState.self) private var appState

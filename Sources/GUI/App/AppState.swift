@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 @MainActor
 @Observable

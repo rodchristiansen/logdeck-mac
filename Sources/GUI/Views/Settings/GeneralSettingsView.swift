@@ -1,5 +1,5 @@
 import SwiftUI
-import LogDeckCore
+import Core
 
 struct GeneralSettingsView: View {
     @AppStorage("autoTail") private var autoTail = true
