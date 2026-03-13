@@ -1,5 +1,5 @@
 import Testing
-@testable import LogDeck
+@testable import LogDeckCore
 
 @Suite("Tool Module Detection")
 struct ToolModuleTests {
