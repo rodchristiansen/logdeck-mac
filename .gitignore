@@ -7,3 +7,6 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 .netrc
+.env
+/build/
+/dist/
