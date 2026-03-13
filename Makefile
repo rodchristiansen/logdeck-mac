@@ -8,6 +8,12 @@
 -include .env
 export
 
+# Strip surrounding quotes if values were quoted in .env (Make doesn't do this like bash)
+SIGNING_IDENTITY_APP  := $(subst ",,$(SIGNING_IDENTITY_APP))
+SIGNING_IDENTITY_PKG  := $(subst ",,$(SIGNING_IDENTITY_PKG))
+NOTARIZATION_PROFILE  := $(subst ",,$(NOTARIZATION_PROFILE))
+NOTARIZATION_TEAM_ID  := $(subst ",,$(NOTARIZATION_TEAM_ID))
+
 # Version from environment or generate timestamp
 VERSION ?= $(shell date '+%Y.%m.%d.%H%M')
 
