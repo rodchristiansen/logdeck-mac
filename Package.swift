@@ -9,7 +9,7 @@ let package = Package(
     ],
     products: [
         .library(name: "Core", targets: ["Core"]),
-        .executable(name: "LogDeck", targets: ["GUI"]),
+        .executable(name: "LogDeckApp", targets: ["GUI"]),
         .executable(name: "logdeck", targets: ["CLI"])
     ],
     targets: [

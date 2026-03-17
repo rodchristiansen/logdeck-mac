@@ -28,11 +28,11 @@ SCRIPTS_DIR   = $(BUILD_DIR)/scripts
 ARM64_BUILD_DIR  = .build/arm64-apple-macosx/release
 X86_64_BUILD_DIR = .build/x86_64-apple-macosx/release
 UNIVERSAL_DIR    = $(BUILD_DIR)/universal
-GUI_BINARY       = $(UNIVERSAL_DIR)/LogDeck
+GUI_BINARY       = $(UNIVERSAL_DIR)/LogDeckApp
 CLI_BINARY       = $(UNIVERSAL_DIR)/logdeck
 
 # Icon source (Icon Composer .icon bundle)
-ICON_SOURCE    = $(BUILD_DIR)/resources/LogDeck.icon
+ICON_SOURCE    = resources/LogDeck.icon
 ICON_BUILD_DIR = $(BUILD_DIR)/actool-out
 
 # Package root layout (installed locations)
@@ -121,8 +121,8 @@ swift-build:
 	@echo "$(BLUE)Creating universal binaries...$(NC)"
 	@mkdir -p "$(UNIVERSAL_DIR)"
 	@lipo -create \
-		"$(ARM64_BUILD_DIR)/LogDeck" \
-		"$(X86_64_BUILD_DIR)/LogDeck" \
+		"$(ARM64_BUILD_DIR)/LogDeckApp" \
+		"$(X86_64_BUILD_DIR)/LogDeckApp" \
 		-output "$(GUI_BINARY)"
 	@lipo -create \
 		"$(ARM64_BUILD_DIR)/logdeck" \
@@ -158,17 +158,21 @@ compile-icon: assemble
 			"$(ICON_SOURCE)" > /dev/null; \
 		if [ -f "$(ICON_BUILD_DIR)/Assets.car" ]; then \
 			cp "$(ICON_BUILD_DIR)/Assets.car" "$(APP_RESOURCES_DIR)/Assets.car"; \
-			echo "$(GREEN)✓ Icon compiled: Assets.car$(NC)"; \
+			echo "$(GREEN)Icon compiled: Assets.car$(NC)"; \
 		else \
-			echo "$(RED)✗ actool did not produce Assets.car$(NC)"; \
+			echo "$(RED)actool did not produce Assets.car$(NC)"; \
 			exit 1; \
 		fi; \
 		if [ -f "$(ICON_BUILD_DIR)/LogDeck.icns" ]; then \
 			cp "$(ICON_BUILD_DIR)/LogDeck.icns" "$(APP_RESOURCES_DIR)/LogDeck.icns"; \
-			echo "$(GREEN)✓ Icon compiled: LogDeck.icns (legacy fallback)$(NC)"; \
+			echo "$(GREEN)Icon compiled: LogDeck.icns (legacy fallback)$(NC)"; \
 		fi; \
+		/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile LogDeck" "$(APP_BUNDLE)/Contents/Info.plist"; \
+		/usr/libexec/PlistBuddy -c "Set :CFBundleIconName LogDeck" "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || \
+			/usr/libexec/PlistBuddy -c "Add :CFBundleIconName string LogDeck" "$(APP_BUNDLE)/Contents/Info.plist"; \
+		echo "$(GREEN)Icon keys set in Info.plist$(NC)"; \
 	else \
-		echo "$(YELLOW)⚠ Icon bundle not found at: $(ICON_SOURCE)$(NC)"; \
+		echo "$(YELLOW)Icon bundle not found at: $(ICON_SOURCE)$(NC)"; \
 		echo "$(YELLOW)  Build will continue without an app icon$(NC)"; \
 	fi
 
