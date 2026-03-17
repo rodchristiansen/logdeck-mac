@@ -31,6 +31,10 @@ UNIVERSAL_DIR    = $(BUILD_DIR)/universal
 GUI_BINARY       = $(UNIVERSAL_DIR)/LogDeck
 CLI_BINARY       = $(UNIVERSAL_DIR)/logdeck
 
+# Icon source (Icon Composer .icon bundle)
+ICON_SOURCE    = $(BUILD_DIR)/resources/LogDeck.icon
+ICON_BUILD_DIR = $(BUILD_DIR)/actool-out
+
 # Package root layout (installed locations)
 APP_INSTALL_PATH  = Applications/Utilities/LogDeck.app
 CLI_INSTALL_PATH  = usr/local/bin
@@ -60,7 +64,7 @@ YELLOW = \033[1;33m
 BLUE   = \033[0;34m
 NC     = \033[0m
 
-.PHONY: all build test swift-build assemble sign-binaries build-pkg sign-pkg \
+.PHONY: all build test swift-build assemble compile-icon sign-binaries build-pkg sign-pkg \
         notarize-pkg verify install check-signing-config list-identities clean help
 
 # ---------------------------------------------------------------------------
@@ -140,7 +144,35 @@ assemble: swift-build
 	@printf 'APPL????' > "$(APP_BUNDLE)/Contents/PkgInfo"
 	@echo "$(GREEN)✓ Package root assembled: $(PKG_ROOT)/$(NC)"
 
-sign-binaries: assemble
+compile-icon: assemble
+	@if [ -d "$(ICON_SOURCE)" ]; then \
+		echo "$(BLUE)Compiling icon bundle with actool...$(NC)"; \
+		mkdir -p "$(ICON_BUILD_DIR)"; \
+		xcrun actool \
+			--compile "$(ICON_BUILD_DIR)" \
+			--platform macosx \
+			--minimum-deployment-target 14.0 \
+			--app-icon "LogDeck" \
+			--output-partial-info-plist "$(ICON_BUILD_DIR)/partial-info.plist" \
+			--warnings --errors \
+			"$(ICON_SOURCE)" > /dev/null; \
+		if [ -f "$(ICON_BUILD_DIR)/Assets.car" ]; then \
+			cp "$(ICON_BUILD_DIR)/Assets.car" "$(APP_RESOURCES_DIR)/Assets.car"; \
+			echo "$(GREEN)✓ Icon compiled: Assets.car$(NC)"; \
+		else \
+			echo "$(RED)✗ actool did not produce Assets.car$(NC)"; \
+			exit 1; \
+		fi; \
+		if [ -f "$(ICON_BUILD_DIR)/LogDeck.icns" ]; then \
+			cp "$(ICON_BUILD_DIR)/LogDeck.icns" "$(APP_RESOURCES_DIR)/LogDeck.icns"; \
+			echo "$(GREEN)✓ Icon compiled: LogDeck.icns (legacy fallback)$(NC)"; \
+		fi; \
+	else \
+		echo "$(YELLOW)⚠ Icon bundle not found at: $(ICON_SOURCE)$(NC)"; \
+		echo "$(YELLOW)  Build will continue without an app icon$(NC)"; \
+	fi
+
+sign-binaries: compile-icon
 	@echo "$(BLUE)Signing CLI binary...$(NC)"
 	@codesign --force --sign "$(SIGNING_IDENTITY_APP)" \
 		--options runtime \
