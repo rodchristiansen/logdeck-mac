@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Debug LogDeck",
+            "target": "LogDeck",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug LogDeck"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Release LogDeck",
+            "target": "LogDeck",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release LogDeck"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Debug logdeck",
+            "target": "logdeck",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug logdeck"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Release logdeck",
+            "target": "logdeck",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release logdeck"
+        }
+    ]
+}
