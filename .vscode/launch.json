@@ -39,6 +39,26 @@
             "target": "logdeck",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release logdeck"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Debug LogDeckApp",
+            "target": "LogDeckApp",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug LogDeckApp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:logdeck}",
+            "name": "Release LogDeckApp",
+            "target": "LogDeckApp",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release LogDeckApp"
         }
     ]
 }
