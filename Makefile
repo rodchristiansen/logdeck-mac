@@ -202,6 +202,8 @@ build-pkg: sign-binaries
 			--root "$(PKG_ROOT)" \
 			--identifier "$(PKG_ID)" \
 			--version "$(VERSION)" \
+			--install-location "/" \
+			--component-plist "$(PACKAGING_DIR)/component.plist" \
 			--scripts "$(SCRIPTS_DIR)" \
 			"$(PKG_OUTPUT)"; \
 	else \
@@ -209,6 +211,8 @@ build-pkg: sign-binaries
 			--root "$(PKG_ROOT)" \
 			--identifier "$(PKG_ID)" \
 			--version "$(VERSION)" \
+			--install-location "/" \
+			--component-plist "$(PACKAGING_DIR)/component.plist" \
 			"$(PKG_OUTPUT)"; \
 	fi
 	@echo "$(GREEN)✓ Package built: $(PKG_OUTPUT)$(NC)"
