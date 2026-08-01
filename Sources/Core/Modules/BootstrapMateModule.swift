@@ -8,6 +8,7 @@ public struct BootstrapMateModule: ToolModule {
     public let category = ToolCategory.bootstrap
 
     public let detectionPaths = [
+        "/Applications/Utilities/Managed Bootstrap Install.app",
         "/Applications/Utilities/BootstrapMate.app",
         "/Library/Managed Bootstrap",
         "/usr/local/bootstrapmate"

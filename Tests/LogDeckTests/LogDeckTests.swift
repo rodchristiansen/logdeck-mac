@@ -16,7 +16,7 @@ struct ToolModuleTests {
     func bootstrapMateDetectionPaths() {
         let module = BootstrapMateModule()
         #expect(module.id == "bootstrapmate")
-        #expect(module.detectionPaths.contains("/Applications/Utilities/BootstrapMate.app"))
+        #expect(module.detectionPaths.contains("/Applications/Utilities/Managed Bootstrap Install.app"))
         #expect(module.category == .bootstrap)
     }
 

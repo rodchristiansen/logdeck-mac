@@ -8,6 +8,8 @@ public struct ReportMateModule: ToolModule {
     public let category = ToolCategory.reporting
 
     public let detectionPaths = [
+        "/Applications/Utilities/Managed Reports Runner.app",
+        "/Applications/Utilities/ReportMate.app",
         "/usr/local/reportmate/ReportMate.app",
         "/usr/local/munkireport/munkireport-runner"
     ]
@@ -42,8 +44,8 @@ public struct ReportMateModule: ToolModule {
         ),
         SupportPath(
             id: "reportmate-runner",
-            label: "ReportMate Runner",
-            path: "/usr/local/reportmate/ReportMate.app",
+            label: "Managed Reports Runner",
+            path: "/Applications/Utilities/Managed Reports Runner.app",
             kind: .binary
         )
     ]
