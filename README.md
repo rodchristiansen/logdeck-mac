@@ -20,8 +20,8 @@ A macOS log viewer for Mac admin tooling. One app to find, view, and tail logs f
 | Tool | Category | Detection |
 |------|----------|-----------|
 | **Munki** | Package Management | `/usr/local/munki/managedsoftwareupdate` |
-| **BootstrapMate** | Bootstrap & Enrollment | `/Applications/Utilities/BootstrapMate.app` |
-| **ReportMate** | Reporting | `/usr/local/reportmate/ReportMate.app` |
+| **BootstrapMate** | Bootstrap & Enrollment | `/Applications/Utilities/Managed Bootstrap Install.app` |
+| **ReportMate** | Reporting | `/Applications/Utilities/Managed Reports Runner.app` |
 | **Outset** | Scripting & Automation | `/usr/local/outset/outset` |
 | **Intune** | MDM & Endpoint | `/Library/Logs/Microsoft/Intune` |
 | **Management Scripts** | Scripting & Automation | `/Library/Management/Scripts` |
