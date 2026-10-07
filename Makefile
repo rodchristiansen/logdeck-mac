@@ -24,8 +24,8 @@ DIST_DIR = dist
 PKG_ROOT = $(BUILD_DIR)/pkg-root
 APP_BUNDLE_PATH = Applications/Utilities/LogDeck.app
 APP_CONTENTS = $(PKG_ROOT)/$(APP_BUNDLE_PATH)/Contents
-APP_IDENTIFIER = com.github.logdeck
-CLI_IDENTIFIER = com.github.logdeck.cli
+APP_IDENTIFIER = com.github.rodchristiansen.logdeck
+CLI_IDENTIFIER = com.github.rodchristiansen.logdeck.cli
 
 # The output path differs between toolchains, so ask SwiftPM for it.
 SWIFT_BUILD_DIR = $(shell swift build -c release --arch arm64 --arch x86_64 --show-bin-path)

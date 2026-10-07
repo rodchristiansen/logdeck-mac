@@ -213,3 +213,51 @@ struct LogSourceTests {
         #expect(!source.exists)
     }
 }
+
+@Suite("Preferences")
+struct PreferencesTests {
+    private func scratchDefaults() -> (UserDefaults, String) {
+        let name = "logdeck-tests-\(UUID().uuidString)"
+        return (UserDefaults(suiteName: name)!, name)
+    }
+
+    @Test("The domain matches the bundle identifier")
+    func domain() throws {
+        #expect(Preferences.domain == "com.github.rodchristiansen.logdeck")
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let template = try String(contentsOf: root.appendingPathComponent("packaging/Info.plist.template"), encoding: .utf8)
+        #expect(template.contains("<string>\(Preferences.domain)</string>"))
+        #expect(!Preferences.legacyDomains.contains(Preferences.domain))
+    }
+
+    @Test("Settings move from the newest legacy domain that has them")
+    func migrates() {
+        let (target, t) = scratchDefaults()
+        let (newer, n) = scratchDefaults()
+        let (older, o) = scratchDefaults()
+        defer { for name in [t, n, o] { UserDefaults.standard.removePersistentDomain(forName: name) } }
+
+        newer.set(["munki": false], forKey: "moduleOverrides")
+        older.set(["munki": true, "crypt": false], forKey: "moduleOverrides")
+        older.set("crypt", forKey: "selectedModule")
+
+        let moved = Preferences.migrate(into: target, from: [newer, older])
+        #expect(Set(moved) == ["moduleOverrides", "selectedModule"])
+        #expect(target.dictionary(forKey: "moduleOverrides") as? [String: Bool] == ["munki": false])
+        #expect(target.string(forKey: "selectedModule") == "crypt")
+        #expect(older.string(forKey: "selectedModule") == "crypt")
+    }
+
+    @Test("A setting already in the new domain is kept")
+    func keepsExisting() {
+        let (target, t) = scratchDefaults()
+        let (legacy, l) = scratchDefaults()
+        defer { for name in [t, l] { UserDefaults.standard.removePersistentDomain(forName: name) } }
+
+        target.set("munki", forKey: "selectedModule")
+        legacy.set("crypt", forKey: "selectedModule")
+        #expect(Preferences.migrate(into: target, from: [legacy]).isEmpty)
+        #expect(target.string(forKey: "selectedModule") == "munki")
+    }
+}
