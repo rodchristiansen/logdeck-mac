@@ -6,7 +6,7 @@ public enum Preferences {
     public static let domain = "com.github.rodchristiansen.logdeck"
 
     /// Domains earlier builds used, newest first.
-    public static let legacyDomains = ["com.github.logdeck", "ca.ecuad.macadmin.LogDeck"]
+    public static let legacyDomains = ["com.github.logdeck"]
 
     /// The keys the app stores.
     public static let keys = ["moduleOverrides", "selectedModule"]
