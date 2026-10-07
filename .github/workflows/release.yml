@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      # Every macOS job builds with Xcode 27, which the app icon needs: an older
+      # actool drops its light and dark appearances. The xcode-27 image ships
+      # it; stop here if it is gone rather than build with another Xcode.
+      - name: Select Xcode 27
+        run: |
+          set -euo pipefail
+          XCODE=/Applications/Xcode_27.app
+          if [ ! -d "$XCODE" ]; then
+            XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1 || true)
+          fi
+          if [ -z "$XCODE" ] || [ ! -d "$XCODE" ]; then
+            echo "::error::Xcode 27 is not installed on this runner. Installed: $(ls -d /Applications/Xcode*.app 2>/dev/null | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcrun --show-sdk-version
+
+      # Tags are vYYYY.MM.DD.HHMM; the version is the tag without its v.
+      - name: Version from tag
+        id: ver
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build unsigned package
+        env:
+          VERSION: ${{ steps.ver.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+          packaging/build-pkg.sh "$VERSION" artifacts
+          shasum -a 256 "artifacts/LogDeck-${VERSION}.pkg" > "artifacts/LogDeck-${VERSION}.pkg.sha256"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LogDeck ${{ steps.ver.outputs.VERSION }}
+          body: Unsigned package built from this tag. It installs LogDeck.app into /Applications/Utilities and links the logdeck tool into /usr/local/bin. Sign the app with your own Developer ID Application identity, then sign and notarize the package, before deployment.
+          files: |
+            artifacts/LogDeck-${{ steps.ver.outputs.VERSION }}.pkg
+            artifacts/LogDeck-${{ steps.ver.outputs.VERSION }}.pkg.sha256

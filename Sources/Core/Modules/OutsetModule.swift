@@ -1,72 +1,58 @@
 import Foundation
 
+/// Outset: one session directory per run,
+/// /Library/Managed State/logs/YYYY-MM-DD/HHMMSS/outset.log. The flat outset.log
+/// and its rotations at the root predate that layout and are still listed. A
+/// user agent that cannot open the shared folder writes ~/Library/Logs/outset.log.
 public struct OutsetModule: ToolModule {
     public init() {}
     public let id = "outset"
     public let name = "Outset"
+    public let role = "State"
     public let icon = "terminal"
-    public let category = ToolCategory.scripting
+    public let category = ToolCategory.managementTools
 
     public let detectionPaths = [
-        "/usr/local/outset/outset"
+        "/Applications/Utilities/Managed State Keeper.app",
+        "/usr/local/outset/outset",
+        "/Library/Managed State/logs"
+    ]
+
+    public let logDirectories = [
+        LogDirectory(
+            id: "outset-sessions",
+            label: "Run Sessions",
+            paths: ["/Library/Managed State/logs"],
+            sessionLogNames: ["outset.log"]
+        )
     ]
 
     public let logSources = [
         LogSource(
-            id: "outset-root",
-            label: "Root Log",
-            path: "/var/log/outset.log",
-            requiresPrivilege: true
-        ),
-        LogSource(
             id: "outset-user",
-            label: "User Log",
+            label: "Your log (fallback)",
             path: "~/Library/Logs/outset.log"
         )
     ]
 
     public let supportPaths = [
         SupportPath(
-            id: "outset-login-every",
-            label: "Login Every Scripts",
-            path: "/usr/local/outset/login-every",
+            id: "outset-prefs",
+            label: "Preferences",
+            path: "/Library/Preferences/io.macadmins.Outset.plist",
+            kind: .configuration
+        ),
+        SupportPath(
+            id: "outset-scripts",
+            label: "Script Folders",
+            path: "/usr/local/outset",
             kind: .scripts
         ),
         SupportPath(
-            id: "outset-login-once",
-            label: "Login Once Scripts",
-            path: "/usr/local/outset/login-once",
-            kind: .scripts
-        ),
-        SupportPath(
-            id: "outset-login-priv-every",
-            label: "Login Privileged Every",
-            path: "/usr/local/outset/login-privileged-every",
-            kind: .scripts
-        ),
-        SupportPath(
-            id: "outset-login-priv-once",
-            label: "Login Privileged Once",
-            path: "/usr/local/outset/login-privileged-once",
-            kind: .scripts
-        ),
-        SupportPath(
-            id: "outset-boot-every",
-            label: "Boot Every Scripts",
-            path: "/usr/local/outset/boot-every",
-            kind: .scripts
-        ),
-        SupportPath(
-            id: "outset-boot-once",
-            label: "Boot Once Scripts",
-            path: "/usr/local/outset/boot-once",
-            kind: .scripts
-        ),
-        SupportPath(
-            id: "outset-on-demand",
-            label: "On Demand Scripts",
-            path: "/usr/local/outset/on-demand",
-            kind: .scripts
+            id: "outset-app",
+            label: "Managed State Keeper",
+            path: "/Applications/Utilities/Managed State Keeper.app",
+            kind: .binary
         )
     ]
 }

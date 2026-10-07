@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      # Every macOS job builds with Xcode 27, which the app icon needs: an older
+      # actool drops its light and dark appearances. The xcode-27 image ships
+      # it; stop here if it is gone rather than build with another Xcode.
+      - name: Select Xcode 27
+        run: |
+          set -euo pipefail
+          XCODE=/Applications/Xcode_27.app
+          if [ ! -d "$XCODE" ]; then
+            XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1 || true)
+          fi
+          if [ -z "$XCODE" ] || [ ! -d "$XCODE" ]; then
+            echo "::error::Xcode 27 is not installed on this runner. Installed: $(ls -d /Applications/Xcode*.app 2>/dev/null | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcrun --show-sdk-version
+      - name: Build and test
+        run: |
+          swift build
+          swift test
+      - name: Check the package layout
+        run: |
+          set -euo pipefail
+          packaging/build-pkg.sh 2026.01.01.0000 pkgout
+          pkg=pkgout/LogDeck-2026.01.01.0000.pkg
+          files=$(pkgutil --payload-files "$pkg" | grep -v '/\._')
+          echo "$files"
+          echo "$files" | grep -qx './Applications/Utilities/LogDeck.app/Contents/MacOS/LogDeck'
+          echo "$files" | grep -qx './Applications/Utilities/LogDeck.app/Contents/Helpers/logdeck'
+          echo "$files" | grep -qx './Applications/Utilities/LogDeck.app/Contents/Resources/Assets.car'
+          echo "$files" | grep -qx './Applications/Utilities/LogDeck.app/Contents/Resources/LogDeck.icns'
+          echo "$files" | grep -qx './usr/local/bin/logdeck'
+          pkgutil --expand "$pkg" expanded
+          info=$(cat expanded/*/PackageInfo)
+          echo "$info"
+          echo "$info" | grep -q '<bundle-version/>'
+          echo "$info" | grep -q 'relocatable="false"'
+          vtool -show-build "build/pkg-root/Applications/Utilities/LogDeck.app/Contents/MacOS/LogDeck" | grep -q 'minos 14.0'

@@ -28,7 +28,7 @@ struct GeneralSettingsView: View {
             }
 
             Section("Detection") {
-                Text("LogDeck scans known filesystem paths to detect installed tools. Re-detection happens automatically when the app becomes active.")
+                Text("LogDeck scans known filesystem paths to detect installed tools. Logs are rescanned whenever LogDeck becomes active, or with Command-R.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

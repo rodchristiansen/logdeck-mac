@@ -43,10 +43,9 @@ public actor LogReader {
             readOffset = 0
         }
 
-        guard let data = try handle.readToEnd(),
-              let content = String(data: data, encoding: .utf8) else {
-            throw ReadError.readFailed(path)
-        }
+        guard let data = try handle.readToEnd() else { return [] }
+        // Lossy: a read that starts mid-file can land inside a UTF-8 sequence.
+        let content = String(decoding: data, as: UTF8.self)
 
         let lines = content.components(separatedBy: .newlines)
         return lines.enumerated().map { index, line in
@@ -65,19 +64,19 @@ public actor LogReader {
         defer { try? handle.close() }
 
         let fileSize = try handle.seekToEnd()
-        guard fileSize > offset else {
-            return ([], offset)
+        // A file shorter than what was read has been rolled over: start again.
+        let start = fileSize < offset ? 0 : offset
+        guard fileSize > start else {
+            return ([], fileSize)
         }
 
-        try handle.seek(toOffset: offset)
-        guard let data = try handle.readToEnd(),
-              let content = String(data: data, encoding: .utf8) else {
-            return ([], offset)
-        }
+        try handle.seek(toOffset: start)
+        guard let data = try handle.readToEnd() else { return ([], fileSize) }
+        let content = String(decoding: data, as: UTF8.self)
 
         let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
         let entries = lines.enumerated().map { index, line in
-            LogEntry(id: Int(offset) + index, line: line)
+            LogEntry(id: Int(start) + index, line: line)
         }
         return (entries, fileSize)
     }

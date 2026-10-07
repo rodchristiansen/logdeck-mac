@@ -10,7 +10,7 @@ struct SidebarView: View {
             ForEach(appState.groupedModules, id: \.0) { category, modules in
                 Section(category.rawValue) {
                     ForEach(modules, id: \.id) { module in
-                        ToolRowView(module: module)
+                        ToolRowView(module: module, logs: appState.logs[module.id])
                             .tag(module.id)
                     }
                 }
@@ -20,6 +20,10 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .onChange(of: appState.selectedModuleID) {
             appState.selectedLogSource = nil
+            appState.selectNewestIfNeeded()
+            if let id = appState.selectedModuleID {
+                UserDefaults.standard.set(id, forKey: "selectedModule")
+            }
         }
     }
 }

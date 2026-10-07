@@ -1,67 +1,57 @@
 # LogDeck
 
-A macOS log viewer for Mac admin tooling. One app to find, view, and tail logs from Munki, BootstrapMate, ReportMate, Outset, Intune, and more.
+A macOS log viewer for Mac management tools. One window shows the local logs of every tool on the Mac, each listed newest first the way the tool's own Logs tab lists them.
 
-![macOS 15+](https://img.shields.io/badge/macOS-15%2B-blue)
-![Swift 6.2](https://img.shields.io/badge/Swift-6.2-orange)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
+![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 ## What it does
 
-- **Auto-detects** installed Mac admin tools by scanning known filesystem paths
-- **Unified sidebar** showing all detected tools grouped by category
-- **Live tail** log files with 1-second polling
-- **Search/filter** across log content with severity highlighting (error/warning/debug)
-- **Quick actions**: Reveal in Finder, Copy Path, Open in Console.app, Tail in Terminal
-- **Per-module toggle** to enable/disable tools you don't use
+- Lists every management tool in one sidebar, with how many logs each has.
+- Reads each tool's `/Library/Managed <Bucket>/logs` folder: run sessions (`YYYY-MM-DD/HHMMSS/`), daily folders (`YYYY-MM-DD/`) and flat logs with their rolls, newest first.
+- Colours lines by level (error, warning, success, debug, section headers) as the tools' own Logs tabs do.
+- Follows a log as it grows, filters lines, and opens the log folder, Console or a `tail -f` in Terminal.
+- Says plainly when a tool has no logs yet, is not installed, or needs root to read.
 
-## Supported Tools
+## Tools
 
-| Tool | Category | Detection |
-|------|----------|-----------|
-| **Munki** | Package Management | `/usr/local/munki/managedsoftwareupdate` |
-| **BootstrapMate** | Bootstrap & Enrollment | `/Applications/Utilities/BootstrapMate.app` |
-| **ReportMate** | Reporting | `/usr/local/reportmate/ReportMate.app` |
-| **Outset** | Scripting & Automation | `/usr/local/outset/outset` |
-| **Intune** | MDM & Endpoint | `/Library/Logs/Microsoft/Intune` |
-| **Management Scripts** | Scripting & Automation | `/Library/Management/Scripts` |
-| **Crypt** | Security | `/Library/Crypt` |
-| **InstallApplications** | Bootstrap & Enrollment | `/var/log/installapplications` |
-| **CommitsListener** | Other | `~/Library/Logs/CommitsListener` |
+| Tool | Role | Logs |
+|------|------|------|
+| BootstrapMate | Bootstrap | `/Library/Managed Bootstrap/logs/YYYY-MM-DD/HHMMSS/bootstrap.log` |
+| ReportMate | Reports | `/Library/Managed Reports/logs/reportmate.log`, daily rolls, launchd output |
+| Munki | Installs | `/Library/Managed Installs/logs/` flat logs and `YYYY-MM-DD/HHMM/run.log` |
+| Outset | State | `/Library/Managed State/logs/YYYY-MM-DD/HHMMSS/outset.log` |
+| Crypt | Encryption | `/Library/Managed Encryption/logs/crypt.log` and daily rolls |
+| swiftDialog | Notifications | `/Library/Managed Notifications/logs/YYYY-MM-DD/dialog.log` |
+| ManageUsers | Users | `/Library/Managed Users/logs/YYYY-MM-DD/manageusers.log` |
+| Utilities | dockutil and others | `/Library/Managed Utilities/logs/YYYY-MM-DD/*.log` |
+| Intune | MDM agent | `/Library/Logs/Microsoft/Intune`, `~/Library/Logs/Company Portal` |
+| Management Scripts | Scripts | `/Library/Management/Logs` |
 
-## Requirements
-
-- macOS 15 (Sequoia) or later
-- Xcode 16.3+ / Swift 6.2+ for building from source
+The command-line tool reads the same places: `logdeck`, `logdeck <tool>`, `logdeck <tool> -l`, `logdeck <tool> -f`.
 
 ## Building
 
+Run the tests:
+
 ```bash
-swift build
 swift test
 ```
 
-Or open in Xcode:
+Build `build/pkg-root/Applications/Utilities/LogDeck.app`. The app icon is the Icon Composer bundle `resources/LogDeck.icon`, compiled by Xcode 27's actool:
 
 ```bash
-open Package.swift
+make app
 ```
 
-## Architecture
+Build the installer package, `dist/LogDeck-<version>.pkg`, which installs LogDeck.app into `/Applications/Utilities` and links `/usr/local/bin/logdeck` to the tool inside it:
 
-- **Swift 6.2** with strict concurrency checking
-- **SwiftUI** with `NavigationSplitView`, `@Observable`, modern APIs
-- **`ToolModule` protocol** — each tool implements detection paths, log sources, and support paths
-- **`LogTailer`** — `@Observable` service with 1-second file polling
-- **`LogReader`** actor — thread-safe file reading with tail support
+```bash
+make pkg VERSION=2026.10.07.1530
+```
 
-## Planned
-
-- [ ] Privileged helper (SMAppService) for root-owned log access
-- [ ] Unified Log (OSLog) subsystem queries
-- [ ] munkipkg wrapper for Munki distribution
-- [ ] GitHub Actions CI/CD with signing + notarization
-- [ ] DMG packaging for direct download
+Set `SIGNING_IDENTITY_APP` and `SIGNING_IDENTITY_PKG` (see `.env.example`) to sign, and `NOTARIZATION_PROFILE` for `make notarize`. Pushing a `vYYYY.MM.DD.HHMM` tag publishes an unsigned package as a GitHub release.
 
 ## License
 
