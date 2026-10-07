@@ -49,4 +49,7 @@ jobs:
           echo "$info"
           echo "$info" | grep -q '<bundle-version/>'
           echo "$info" | grep -q 'relocatable="false"'
+          echo "$info" | grep -q 'identifier="com.github.rodchristiansen.logdeck"'
+          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build/pkg-root/Applications/Utilities/LogDeck.app/Contents/Info.plist)
+          [ "$bundle_id" = com.github.rodchristiansen.logdeck ]
           vtool -show-build "build/pkg-root/Applications/Utilities/LogDeck.app/Contents/MacOS/LogDeck" | grep -q 'minos 14.0'
