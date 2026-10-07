@@ -7,12 +7,12 @@ struct ModulesSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Enable or disable tool modules. Installed tools are auto-detected.")
+                Text("Choose which tools the sidebar lists. Installed tools, and every management tool, are listed by default.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
-            ForEach(appState.groupedModules, id: \.0) { category, modules in
+            ForEach(appState.allGroupedModules, id: \.0) { category, modules in
                 Section(category.rawValue) {
                     ForEach(modules, id: \.id) { module in
                         ModuleToggleRow(module: module)
@@ -55,7 +55,7 @@ private struct ModuleToggleRow: View {
                         Text("·")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("\(module.logSources.count) log sources")
+                        Text("\(module.logDirectories.count + module.logSources.count) log locations")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

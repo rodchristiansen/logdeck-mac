@@ -4,31 +4,36 @@ import Core
 struct LogLineView: View {
     let entry: LogEntry
     let searchText: String
+    let fontSize: Double
 
     var body: some View {
-        Text(entry.line)
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundStyle(severityColor)
+        Text(entry.line.isEmpty ? " " : entry.line)
+            .font(.system(size: fontSize, design: .monospaced))
+            .foregroundStyle(entry.level.color)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 0.5)
             .padding(.horizontal, 4)
-            .background(backgroundColor)
-            .contentShape(Rectangle())
+            .background(highlight)
     }
 
-    private var severityColor: Color {
-        switch entry.severity {
-        case .error: .red
-        case .warning: .orange
-        case .debug: .secondary
-        case .info: .primary
-        }
-    }
-
-    private var backgroundColor: Color {
-        if !searchText.isEmpty && entry.line.localizedStandardContains(searchText) {
-            return .accentColor.opacity(0.1)
+    private var highlight: Color {
+        if !searchText.isEmpty && entry.line.localizedCaseInsensitiveContains(searchText) {
+            return .yellow.opacity(0.18)
         }
         return .clear
+    }
+}
+
+extension LineLevel {
+    /// The colours the management tools' own Logs tabs use, on a dark background.
+    var color: Color {
+        switch self {
+        case .error: .red
+        case .warning: .orange
+        case .success: .green
+        case .debug: .gray
+        case .header: .cyan
+        case .info: .white
+        }
     }
 }

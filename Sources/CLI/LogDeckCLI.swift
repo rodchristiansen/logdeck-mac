@@ -23,18 +23,22 @@ struct LogDeckCLI {
         }
 
         let remainingArgs = Array(args.dropFirst())
+        let logs = ModuleLogs(module: module)
 
         if remainingArgs.contains("--list") || remainingArgs.contains("-l") {
-            printLogSources(module)
+            printLogSources(module, logs)
             return
         }
 
-        let shouldFollow = remainingArgs.contains("--follow") || remainingArgs.contains("-f")
+        guard let source = logs.newest else {
+            printNoLogs(module, logs)
+            Darwin.exit(1)
+        }
 
-        if shouldFollow {
-            await tailLogs(module)
+        if remainingArgs.contains("--follow") || remainingArgs.contains("-f") {
+            await tail(source)
         } else {
-            await showLogs(module)
+            await show(source, lines: 200)
         }
     }
 }
@@ -42,126 +46,93 @@ struct LogDeckCLI {
 // MARK: - Commands
 
 private func printUsage() {
-    let usage = """
-    logdeck - Mac admin log viewer
+    print("""
+    logdeck - local logs of the Mac management tools
 
     USAGE:
-      logdeck                  List detected tools
-      logdeck <tool>           Show logs for a tool
-      logdeck <tool> -f        Follow/tail logs
-      logdeck <tool> -l        List log file paths
+      logdeck                  List the tools and how many logs each has
+      logdeck <tool>           Show the end of the tool's newest log
+      logdeck <tool> -f        Follow the tool's newest log
+      logdeck <tool> -l        List every log the tool has, newest first
 
-    TOOLS:
-    \(ModuleRegistry.allModules.map { "  \($0.id)" }.joined(separator: "\n"))
-    """
-    print(usage)
+    TOOLS (by id or role):
+    \(ModuleRegistry.allModules.map { "  \($0.id.padding(toLength: 20, withPad: " ", startingAt: 0))\($0.role)" }.joined(separator: "\n"))
+    """)
 }
 
 private func printToolList() {
-    let detector = ToolDetector()
     let modules = ModuleRegistry.allModules
+    print("logdeck - local logs of the Mac management tools\n")
 
-    print("logdeck - Mac admin log viewer\n")
-    print("Available tools:\n")
-
-    let maxNameLen = modules.map(\.id.count).max() ?? 0
-
+    let width = (modules.map(\.id.count).max() ?? 0) + 2
     for module in modules {
-        let result = detector.detect(module)
-        let status = result.isInstalled ? "\u{001B}[32m●\u{001B}[0m" : "\u{001B}[90m○\u{001B}[0m"
-        let name = module.id.padding(toLength: maxNameLen + 2, withPad: " ", startingAt: 0)
-        let label = result.isInstalled ? module.name : "\u{001B}[90m\(module.name)\u{001B}[0m"
-        let logCount = module.logSources.count
-        let existing = module.logSources.filter(\.exists).count
-        let files = result.isInstalled ? "  (\(existing)/\(logCount) logs found)" : ""
-        print("  \(status) \(name)\(label)\(files)")
+        let logs = ModuleLogs(module: module)
+        let count = logs.folders.reduce(0) { $0 + $1.sessions.count } + logs.existingFiles.count
+        let status = module.isInstalled ? "\u{001B}[32m●\u{001B}[0m" : "\u{001B}[90m○\u{001B}[0m"
+        let id = module.id.padding(toLength: width, withPad: " ", startingAt: 0)
+        let role = module.role.padding(toLength: 15, withPad: " ", startingAt: 0)
+        let summary = !logs.unreadableFolders.isEmpty ? "needs root" : (count == 0 ? "no logs" : "\(count) logs")
+        print("  \(status) \(id)\(role)\(summary)")
     }
-
     print("\nRun 'logdeck <tool>' to view logs, or 'logdeck --help' for more options.")
 }
 
-private func printLogSources(_ module: any ToolModule) {
-    print("\(module.name) log sources:\n")
-    for source in module.logSources {
-        let exists = source.exists
-        let status = exists ? "\u{001B}[32m✓\u{001B}[0m" : "\u{001B}[31m✗\u{001B}[0m"
-        let priv = source.requiresPrivilege ? " \u{001B}[33m(root)\u{001B}[0m" : ""
-        print("  \(status) \(source.label)\(priv)")
-        print("    \(source.resolvedPath)")
-        if exists, let size = source.fileSize {
-            print("    \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
-        }
-        print()
-    }
-}
-
-private func showLogs(_ module: any ToolModule) async {
-    let reader = LogReader()
-    let readableSources = module.logSources.filter { $0.exists && !$0.requiresPrivilege }
-
-    if readableSources.isEmpty {
-        let privileged = module.logSources.filter { $0.requiresPrivilege && $0.exists }
-        if !privileged.isEmpty {
-            printError("All available logs require root access. Try: sudo logdeck \(module.id)")
-        } else {
-            printError("No log files found for \(module.name).")
-        }
-        return
-    }
-
-    for source in readableSources {
-        printHeader(source.label, path: source.resolvedPath)
-        do {
-            let entries = try await reader.readLog(from: source)
-            for entry in entries.suffix(200) {
-                printLogLine(entry)
+private func printLogSources(_ module: any ToolModule, _ logs: ModuleLogs) {
+    print("\(module.name) (\(module.role))\n")
+    for folder in logs.folders {
+        print("\u{001B}[1m\(folder.directory.label)\u{001B}[0m  \u{001B}[90m\(folder.directory.resolvedPath)\u{001B}[0m")
+        switch folder.status {
+        case .missing: print("  folder not found")
+        case .unreadable: print("  \u{001B}[33mneeds root to read\u{001B}[0m")
+        case .available where folder.sessions.isEmpty: print("  no logs yet")
+        case .available:
+            for session in folder.sessions {
+                let date = session.displayDate.padding(toLength: 24, withPad: " ", startingAt: 0)
+                print("  \(date)\(session.displaySize.padding(toLength: 10, withPad: " ", startingAt: 0))\(session.path)")
             }
-        } catch {
-            printError("  Error: \(error.localizedDescription)")
         }
         print()
     }
+    for source in logs.files {
+        let status = source.exists ? "\u{001B}[32m✓\u{001B}[0m" : "\u{001B}[90m✗\u{001B}[0m"
+        print("  \(status) \(source.label)  \u{001B}[90m\(source.resolvedPath)\u{001B}[0m")
+    }
 }
 
-private func tailLogs(_ module: any ToolModule) async {
-    let sources = module.logSources.filter { $0.exists && !$0.requiresPrivilege }
-
-    guard let source = sources.first else {
-        printError("No readable log files found for \(module.name).")
-        return
+private func printNoLogs(_ module: any ToolModule, _ logs: ModuleLogs) {
+    if let unreadable = logs.unreadableFolders.first {
+        printError("\(unreadable.resolvedPath) needs root to read. Try: sudo logdeck \(module.id)")
+    } else if module.isInstalled {
+        printError("\(module.name) has not written any logs yet.")
+    } else {
+        printError("\(module.name) is not installed and has no logs on this Mac.")
     }
+}
 
-    printHeader("Tailing \(source.label)", path: source.resolvedPath)
-    print("\u{001B}[90mPress Ctrl+C to stop\u{001B}[0m\n")
-
-    let reader = LogReader()
-
-    // Show last 50 lines first
+private func show(_ source: LogSource, lines: Int) async {
+    printHeader(source.label, path: source.resolvedPath)
     do {
-        let entries = try await reader.readLog(from: source)
-        for entry in entries.suffix(50) {
+        for entry in try await LogReader().readLog(from: source).suffix(lines) {
             printLogLine(entry)
         }
     } catch {
-        printError("Error: \(error.localizedDescription)")
-        return
+        printError(error.localizedDescription)
     }
+}
 
-    // Poll for new content
-    var offset: UInt64 = 0
-    if let attrs = try? FileManager.default.attributesOfItem(atPath: source.resolvedPath),
-       let size = attrs[.size] as? UInt64 {
-        offset = size
-    }
+private func tail(_ source: LogSource) async {
+    await show(source, lines: 50)
+    print("\u{001B}[90mFollowing; press Ctrl+C to stop\u{001B}[0m")
 
+    let reader = LogReader()
+    let size = (try? FileManager.default.attributesOfItem(atPath: source.resolvedPath))?[.size] as? NSNumber
+    var position = size?.uint64Value ?? 0
     while true {
         try? await Task.sleep(for: .seconds(1))
         do {
-            let (entries, newOffset) = try await reader.readTail(from: source, offset: offset)
-            for entry in entries {
-                printLogLine(entry)
-            }
-            offset = newOffset
+            let (entries, newOffset) = try await reader.readTail(from: source, offset: position)
+            entries.forEach(printLogLine)
+            position = newOffset
         } catch {
             break
         }
@@ -178,16 +149,13 @@ private func printHeader(_ title: String, path: String) {
 private func printLogLine(_ entry: LogEntry) {
     let line = entry.line
     guard !line.isEmpty else { return }
-
-    switch entry.severity {
-    case .error:
-        print("\u{001B}[31m\(line)\u{001B}[0m")
-    case .warning:
-        print("\u{001B}[33m\(line)\u{001B}[0m")
-    case .debug:
-        print("\u{001B}[90m\(line)\u{001B}[0m")
-    case .info:
-        print(line)
+    switch entry.level {
+    case .error: print("\u{001B}[31m\(line)\u{001B}[0m")
+    case .warning: print("\u{001B}[33m\(line)\u{001B}[0m")
+    case .success: print("\u{001B}[32m\(line)\u{001B}[0m")
+    case .header: print("\u{001B}[36m\(line)\u{001B}[0m")
+    case .debug: print("\u{001B}[90m\(line)\u{001B}[0m")
+    case .info: print(line)
     }
 }
 

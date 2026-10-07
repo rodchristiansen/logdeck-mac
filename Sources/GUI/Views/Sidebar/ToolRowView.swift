@@ -3,33 +3,37 @@ import Core
 
 struct ToolRowView: View {
     let module: any ToolModule
-    @Environment(AppState.self) private var appState
+    let logs: ModuleLogs?
 
-    private var isEnabled: Bool {
-        appState.enabledModuleIDs.contains(module.id)
+    private var count: Int {
+        guard let logs else { return 0 }
+        return logs.folders.reduce(0) { $0 + $1.sessions.count } + logs.existingFiles.count
     }
 
     var body: some View {
         Label {
             HStack {
-                Text(module.name)
-                Spacer()
-                if module.isInstalled {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 6))
-                        .foregroundStyle(.green)
-                        .help("Installed")
-                } else {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 6))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(module.name)
+                    Text(module.role)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .help("Not detected")
                 }
+                Spacer()
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 6))
+                    .foregroundStyle(module.isInstalled ? .green : .secondary)
+                    .help(module.isInstalled ? "Installed" : "Not detected")
             }
         } icon: {
             Image(systemName: module.icon)
-                .foregroundStyle(isEnabled ? .primary : .secondary)
         }
-        .opacity(isEnabled ? 1.0 : 0.5)
+        .opacity(module.isInstalled || count > 0 ? 1.0 : 0.6)
     }
 }

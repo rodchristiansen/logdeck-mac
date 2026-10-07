@@ -10,3 +10,6 @@ DerivedData/
 .env
 /build/
 /dist/
+/pkgout/
+/expanded/
+/.worktrees/
