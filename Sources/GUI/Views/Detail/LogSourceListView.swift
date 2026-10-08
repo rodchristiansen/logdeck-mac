@@ -2,7 +2,8 @@ import SwiftUI
 import Core
 
 /// The middle column: a tool's logs, each scanned folder newest first (the way
-/// the tool's own Logs tab lists them), then its fixed log files and support paths.
+/// the tool's own Logs tab lists them), with this user's runs under their own
+/// "This user" heading beside root's, then its fixed log files and support paths.
 struct LogSourceListView: View {
     let module: any ToolModule
     @Environment(AppState.self) private var appState
@@ -25,7 +26,7 @@ struct LogSourceListView: View {
                         }
                     } header: {
                         HStack {
-                            Text(folder.directory.label)
+                            Text(heading(for: folder))
                             Spacer()
                             if !folder.sessions.isEmpty {
                                 Text("\(folder.sessions.count)")
@@ -82,6 +83,16 @@ struct LogSourceListView: View {
                 .keyboardShortcut("r")
             }
         }
+    }
+}
+
+/// A folder's section title. Where a bucket has both root's folder and this
+/// user's, the two read as the tools' own Logs tabs head them.
+private func heading(for folder: ModuleLogs.Folder) -> String {
+    guard folder.hasUserCounterpart else { return folder.directory.label }
+    switch folder.origin {
+    case .system: return folder.origin.label
+    case .user: return "\(folder.origin.label) (\(NSUserName()))"
     }
 }
 

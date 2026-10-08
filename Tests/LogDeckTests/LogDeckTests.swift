@@ -190,6 +190,137 @@ struct LogDirectoryTests {
     }
 }
 
+@Suite("User log folders")
+struct UserLogFolderTests {
+    private func makeHome(_ files: [String: String]) throws -> String {
+        let home = FileManager.default.temporaryDirectory
+            .appendingPathComponent("logdeck-home-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+        for (relative, contents) in files {
+            let path = (home as NSString).appendingPathComponent(relative)
+            try FileManager.default.createDirectory(
+                atPath: (path as NSString).deletingLastPathComponent,
+                withIntermediateDirectories: true
+            )
+            try contents.write(toFile: path, atomically: true, encoding: .utf8)
+        }
+        return home
+    }
+
+    /// A bucket no Mac has, so the system folder is always missing.
+    private let bucket = LogDirectory(
+        id: "probe-sessions",
+        label: "Run Sessions",
+        paths: ["/Library/Managed LogDeckProbe/logs"],
+        sessionLogNames: ["outset.log"]
+    )
+
+    @Test("A Managed bucket folder maps to the same bucket under the user's Library/Logs")
+    func counterpartPath() {
+        let user = bucket.userDirectory(home: "/Users/someone")
+        #expect(user?.path == "/Users/someone/Library/Logs/Managed LogDeckProbe")
+        #expect(user?.origin == .user)
+        #expect(user?.id == "probe-sessions-user")
+        #expect(user?.sessionLogNames == ["outset.log"])
+        #expect(user?.userDirectory(home: "/Users/someone") == nil)
+    }
+
+    @Test("Folders outside the suite layout have no user counterpart")
+    func noCounterpart() {
+        let others = [
+            LogDirectory(id: "a", label: "a", paths: ["/Library/Logs/Microsoft/Intune"]),
+            LogDirectory(id: "b", label: "b", paths: ["/Library/Management/Logs"]),
+            LogDirectory(id: "c", label: "c", paths: ["~/Library/Logs/Company Portal"])
+        ]
+        for directory in others {
+            #expect(directory.userDirectory(home: "/Users/someone") == nil, "\(directory.id)")
+        }
+    }
+
+    @Test("Every management tool bucket gains a user folder")
+    func everyBucket() {
+        for id in ["bootstrapmate", "reportmate", "munki", "outset", "crypt", "swiftdialog", "manageusers", "utilities"] {
+            let directory = ModuleRegistry.find(id)?.logDirectories.first
+            let bucket = directory?.managedBucketFolder ?? "?"
+            #expect(directory?.userDirectory(home: "/Users/someone")?.path == "/Users/someone/Library/Logs/\(bucket)", "\(id)")
+        }
+    }
+
+    @Test("Run sessions in the user's home are listed after root's, newest first")
+    func userSessions() throws {
+        let home = try makeHome([
+            "Library/Logs/Managed LogDeckProbe/2026-10-06/080000/outset.log": "a",
+            "Library/Logs/Managed LogDeckProbe/2026-10-07/091500/outset.log": "b",
+            "Library/Logs/Managed LogDeckProbe/2026-10-07/091500/events.jsonl": "{}"
+        ])
+        defer { try? FileManager.default.removeItem(atPath: home) }
+
+        let folders = ModuleLogs.scan([bucket], home: home)
+        #expect(folders.map(\.origin) == [.system, .user])
+        #expect(folders.allSatisfy { $0.groupID == "probe-sessions" && $0.hasUserCounterpart })
+        #expect(folders[0].status == .missing)
+        #expect(folders[0].sessions.isEmpty)
+        #expect(folders[1].status == .available)
+        #expect(folders[1].sessions.map(\.name) == ["2026-10-07-091500", "2026-10-06-080000"])
+        #expect(folders[1].sessions.allSatisfy { $0.path.hasPrefix(home) && $0.id.hasPrefix("probe-sessions-user/") })
+    }
+
+    @Test("A user's day logs list the day before its rolls")
+    func userDays() throws {
+        let home = try makeHome([
+            "Library/Logs/Managed LogDeckProbe/2026-10-07/dialog.log": "a",
+            "Library/Logs/Managed LogDeckProbe/2026-10-07/dialog.log.1": "b",
+            "Library/Logs/Managed LogDeckProbe/2026-10-05/dialog.log": "c"
+        ])
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let days = LogDirectory(id: "d", label: "Daily Logs", paths: ["/Library/Managed LogDeckProbe/logs"], sessionLogNames: ["dialog.log"])
+        let user = ModuleLogs.scan([days], home: home).last
+        #expect(user?.origin == .user)
+        #expect(user?.sessions.map(\.name) == ["2026-10-07", "2026-10-07 (dialog.log.1)", "2026-10-05"])
+    }
+
+    @Test("No user folder, no user group: the system folder keeps its empty state")
+    func noUserFolder() throws {
+        let home = try makeHome([:])
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let folders = ModuleLogs.scan([bucket], home: home)
+        #expect(folders.count == 1)
+        #expect(folders[0].origin == .system)
+        #expect(!folders[0].hasUserCounterpart)
+        #expect(folders[0].status == .missing)
+    }
+
+    @Test("An empty user folder is listed with its own empty state")
+    func emptyUserFolder() throws {
+        let home = try makeHome([:])
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        try FileManager.default.createDirectory(
+            atPath: (home as NSString).appendingPathComponent("Library/Logs/Managed LogDeckProbe"),
+            withIntermediateDirectories: true
+        )
+        let folders = ModuleLogs.scan([bucket], home: home)
+        #expect(folders.count == 2)
+        #expect(folders[1].status == .available)
+        #expect(folders[1].sessions.isEmpty)
+    }
+
+    @Test("A module picks up the user folder from the home it is given")
+    func moduleLogs() throws {
+        let home = try makeHome([
+            "Library/Logs/Managed State/2026-10-07/101010/outset.log": "a"
+        ])
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let logs = ModuleLogs(module: OutsetModule(), home: home)
+        let user = logs.folders.filter { $0.origin == .user }
+        #expect(user.map(\.id) == ["outset-sessions-user"])
+        #expect(user.first?.sessions.map(\.name) == ["2026-10-07-101010"])
+        #expect(logs.folders.first?.origin == .system)
+        if logs.folders.first?.sessions.isEmpty == true {
+            #expect(logs.newest?.path.hasPrefix(home) == true)
+        }
+    }
+}
+
 @Suite("Log source")
 struct LogSourceTests {
     @Test("Tilde expansion in resolved path")

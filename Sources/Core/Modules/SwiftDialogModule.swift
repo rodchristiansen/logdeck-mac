@@ -1,9 +1,10 @@
 import Foundation
 
-/// swiftDialog: one log per day, shared by every user and root,
+/// swiftDialog: one log per day. Root writes
 /// /Library/Managed Notifications/logs/YYYY-MM-DD/dialog.log, rolled at 5 MB into
-/// dialog.log.1 … dialog.log.5 beside it. When that folder is unavailable dialog
-/// writes ~/Library/Logs/dialog.log instead.
+/// dialog.log.1 … dialog.log.5 beside it; dialog launched as the user writes the
+/// same layout under ~/Library/Logs/Managed Notifications, which ModuleLogs lists
+/// as "This user". Older builds wrote ~/Library/Logs/dialog.log.
 public struct SwiftDialogModule: ToolModule {
     public init() {}
     public let id = "swiftdialog"
