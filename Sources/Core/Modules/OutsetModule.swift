@@ -2,8 +2,10 @@ import Foundation
 
 /// Outset: one session directory per run,
 /// /Library/Managed State/logs/YYYY-MM-DD/HHMMSS/outset.log. The flat outset.log
-/// and its rotations at the root predate that layout and are still listed. A
-/// user agent that cannot open the shared folder writes ~/Library/Logs/outset.log.
+/// and its rotations at the root predate that layout and are still listed.
+/// Runs as the user (login-every, login-once) write the same layout under
+/// ~/Library/Logs/Managed State, which ModuleLogs lists as "This user". Older
+/// builds wrote ~/Library/Logs/outset.log when the shared folder was closed.
 public struct OutsetModule: ToolModule {
     public init() {}
     public let id = "outset"

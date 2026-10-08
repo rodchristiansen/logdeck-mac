@@ -80,7 +80,8 @@ private func printToolList() {
 private func printLogSources(_ module: any ToolModule, _ logs: ModuleLogs) {
     print("\(module.name) (\(module.role))\n")
     for folder in logs.folders {
-        print("\u{001B}[1m\(folder.directory.label)\u{001B}[0m  \u{001B}[90m\(folder.directory.resolvedPath)\u{001B}[0m")
+        let title = folder.hasUserCounterpart ? "\(folder.directory.label) - \(folder.origin.label)" : folder.directory.label
+        print("\u{001B}[1m\(title)\u{001B}[0m  \u{001B}[90m\(folder.directory.resolvedPath)\u{001B}[0m")
         switch folder.status {
         case .missing: print("  folder not found")
         case .unreadable: print("  \u{001B}[33mneeds root to read\u{001B}[0m")

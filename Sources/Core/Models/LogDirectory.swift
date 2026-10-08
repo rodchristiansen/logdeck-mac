@@ -13,7 +13,26 @@ import Foundation
 ///   (`crypt-YYYY-MM-DD.log`), numbered generations and launchd output.
 ///
 /// Every log found becomes a `LogSession`, listed newest first.
+///
+/// A run as the signed-in user writes the same layout under that user's home,
+/// `~/Library/Logs/Managed <Bucket>/`, and never touches the root folder; see
+/// `userDirectory(home:)`.
 public struct LogDirectory: Identifiable, Hashable, Sendable {
+    /// Whose runs a folder holds: root's under /Library, or this user's under
+    /// their home.
+    public enum Origin: String, Sendable {
+        case system
+        case user
+
+        /// The heading the tools' own Logs tabs give each group.
+        public var label: String {
+            switch self {
+            case .system: "System (root)"
+            case .user: "This user"
+            }
+        }
+    }
+
     public let id: String
     public let label: String
     /// Candidate spellings of the folder; the first that exists is scanned.
@@ -27,6 +46,7 @@ public struct LogDirectory: Identifiable, Hashable, Sendable {
     public let flatFilePattern: String
     /// A current log that always leads the list, as crypt.log does in its tool.
     public let pinnedName: String?
+    public let origin: Origin
 
     public init(
         id: String,
@@ -35,7 +55,8 @@ public struct LogDirectory: Identifiable, Hashable, Sendable {
         sessionLogNames: [String] = [],
         includesFlatFiles: Bool = true,
         flatFilePattern: String = #"\.log(\.\d+)?$"#,
-        pinnedName: String? = nil
+        pinnedName: String? = nil,
+        origin: Origin = .system
     ) {
         self.id = id
         self.label = label
@@ -44,6 +65,38 @@ public struct LogDirectory: Identifiable, Hashable, Sendable {
         self.includesFlatFiles = includesFlatFiles
         self.flatFilePattern = flatFilePattern
         self.pinnedName = pinnedName
+        self.origin = origin
+    }
+
+    /// The suite bucket a `/Library/Managed <Bucket>/logs` folder belongs to,
+    /// as its folder name: "Managed State". Nil for any other folder.
+    public var managedBucketFolder: String? {
+        for path in paths {
+            let parts = (path as NSString).pathComponents
+            guard parts.count == 4, parts[0] == "/", parts[1] == "Library",
+                  parts[2].hasPrefix("Managed "), parts[3].lowercased() == "logs" else { continue }
+            return parts[2]
+        }
+        return nil
+    }
+
+    /// This user's counterpart of a `/Library/Managed <Bucket>/logs` folder:
+    /// `<home>/Library/Logs/Managed <Bucket>`, scanned the same way. Nil for a
+    /// folder outside the suite layout, or one that is already a user folder.
+    public func userDirectory(home: String) -> LogDirectory? {
+        guard origin == .system, let bucket = managedBucketFolder else { return nil }
+        let path = ((home as NSString).appendingPathComponent("Library/Logs") as NSString)
+            .appendingPathComponent(bucket)
+        return LogDirectory(
+            id: "\(id)-user",
+            label: label,
+            paths: [path],
+            sessionLogNames: sessionLogNames,
+            includesFlatFiles: includesFlatFiles,
+            flatFilePattern: flatFilePattern,
+            pinnedName: pinnedName,
+            origin: .user
+        )
     }
 
     public var path: String { paths.first ?? "" }
